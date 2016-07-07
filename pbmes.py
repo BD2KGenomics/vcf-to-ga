@@ -7,6 +7,7 @@ import google.protobuf.json_format as json_format
 
 
 
+
 def varmes(rec):
 	gaVariant = variants_pb2.Variant()
 	gaVariant.id = rec.id
@@ -19,17 +20,16 @@ def varmes(rec):
 	gaVariant.end = rec.stop
 	gaVariant.reference_bases = rec.ref
 	if rec.alts is not None:
-		gaVariant.alternate_bases.extend(list(rec.alts)) #checkout in convertvariance
+		gaVariant.alternate_bases.extend(list(rec.alts))
 	#if rec.info is not None:
 		#gaVariant.info.append(list(rec.info))
 	#gaVariant.calls = rec.calls
 	return gaVariant
 
-file = raw_input("vcf file: ")
+file = sys.argv[1]
 samp = pysam.VariantFile(file)
 chrs = "ref_brca1"
 #start = int(raw_input("start: "))
 #stop = int(raw_input("stop: "))
 for rec in samp.fetch(chrs, 0, 100):
-	#print (varmes(rec))
 	print (json_format._MessageToJsonObject(varmes(rec), True))
