@@ -4,9 +4,6 @@ import pysam
 from pysam import VariantFile
 import google.protobuf.json_format as json_format
 
-
-
-
 def varmes(rec):
 	gaVariant = variants_pb2.Variant()
 	gaVariant.id = rec.id
@@ -30,8 +27,6 @@ ofile = sys.argv[2]
 sys.stdout = open(ofile, "w")
 samp = pysam.VariantFile(file)
 chrs = "ref_brca1"
-#start = int(raw_input("start: "))
-#stop = int(raw_input("stop: "))
 for rec in samp.fetch(chrs, 0, 100):
 	print (json_format._MessageToJsonObject(varmes(rec), True))
 
