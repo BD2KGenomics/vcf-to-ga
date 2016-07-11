@@ -3,39 +3,39 @@ import sys
 import pysam
 from pysam import VariantFile
 import google.protobuf.json_format as json_format
+import datetime
+
 
 def vMes(rec,hdr):
 	gaVariant = variants_pb2.Variant()
+	now = datetime.datetime.now()
 	gaVariant.id = rec.id
-	gaVariant.reference_name = rec.chrom
-	#gaVariant.variant_set_id = 
+	gaVariant.reference_name = rec.contig
 	#gaVariant.names =
-	#gaVariant.created = 
-	#gaVariant.updated = 
+	gaVariant.created = int(now.microsecond)
+	gaVariant.updated = int(now.microsecond)
 	gaVariant.start = rec.start
 	gaVariant.end = rec.stop
 	gaVariant.reference_bases = rec.ref
 	if rec.alts is not None:
 		gaVariant.alternate_bases.extend(list(rec.alts))
+	for key, value in rec.info.iteritems():
+		if value is not None:
+			gaVariant.info[key]
 
-	"""gaVariant. = hdr.info
- 	gaVariant. = hdr.version
-	gaVariant. = hdr.samples
- 	gaVariant. = hdr.records
- 	gaVariant. = hdr.contigs
- 	gaVariant. = hdr.filters
- 	gaVariant. = hdr.formats"""
  	return gaVariant
 
 def vHeader(hdr):
  	gaVariantMD = variants_pb2.VariantSetMetadata()
- 	#for keys in hdr.info.keys:
- 		#gaVariantMD.key
+ 	for key, value in hdr.info.iteritems():
+ 		if value is not None:
+ 			gaVariantMD.info[key]
+
  	#gaVariantMD.value = hdr.info.values
- 	gaVariantMD.id = str(hdr.info.items)
+ 	#gaVariantMD.id = 
  	#gaVariantMD.type = 
  	#gaVariantMD.number = hdr.value
- 	gaVariantMD.description = vcfFile.description
+ 	gaVariantMD.description = str(vcfFile.description)
  	return gaVariantMD
 
 def vsMes(rec):
@@ -47,8 +47,9 @@ def vsMes(rec):
 	#gaVariantVS.metadata =
 	return gaVariantVS
 #Main 
-
+#output raw protobuf
 #VCF file to read
+#make note of fields not in file
 file = sys.argv[1]
 #file to output to
 ofile = sys.argv[2]
@@ -61,4 +62,3 @@ print (json_format._MessageToJsonObject(vHeader(hdr), True))
 for rec in vcfFile.fetch(chromo, 0, 1000):
 	print (json_format._MessageToJsonObject(vMes(rec,hdr), True))
 	print (json_format._MessageToJsonObject(vsMes(rec), True))
-	
