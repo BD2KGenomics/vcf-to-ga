@@ -3,17 +3,24 @@ import sys
 import pysam
 from pysam import VariantFile
 import google.protobuf.json_format as json_format
-import datetime
+import time
+import google.protobuf.struct_pb2 as struct_pb2
 
+#this function taken from ga4gh/datamodel/variants.py
+def _encodeValue(value):
+    if isinstance(value, (list, tuple)):
+        return [struct_pb2.Value(string_value=str(v)) for v in value]
+    else:
+        return [struct_pb2.Value(string_value=str(value))]
 
 def vMes(rec,hdr):
 	gaVariant = variants_pb2.Variant()
-	now = datetime.datetime.now()
-	gaVariant.id = rec.id
+	gaVariant.id = rec.id #rec.id is rsID which fits with variant.names description in variants.proto
 	gaVariant.reference_name = rec.contig
-	#gaVariant.names =
-	gaVariant.created = int(now.microsecond)
-	gaVariant.updated = int(now.microsecond)
+	if rec.id is not None:
+		gaVariant.names.append(rec.id)
+	gaVariant.created = int(time.time())
+	gaVariant.updated = int(time.time())
 	gaVariant.start = rec.start
 	gaVariant.end = rec.stop
 	gaVariant.reference_bases = rec.ref
@@ -21,15 +28,14 @@ def vMes(rec,hdr):
 		gaVariant.alternate_bases.extend(list(rec.alts))
 	for key, value in rec.info.iteritems():
 		if value is not None:
-			gaVariant.info[key]
-
- 	return gaVariant
+			gaVariant.info[key].values.extend(_encodeValue(value)) #gives typeError without encodeValue function
+	return gaVariant
 
 def vHeader(hdr):
  	gaVariantMD = variants_pb2.VariantSetMetadata()
- 	for key, value in hdr.info.iteritems():
- 		if value is not None:
- 			gaVariantMD.info[key]
+ 	#for key, value in hdr.info.iteritems():
+ 		#if value is not None:
+ 			#gaVariantMD.info[key].values.extend()
 
  	#gaVariantMD.value = hdr.info.values
  	#gaVariantMD.id = 
@@ -41,7 +47,7 @@ def vHeader(hdr):
 def vsMes(rec):
 	gaVariantVS = variants_pb2.VariantSet()
 	gaVariantVS.reference_set_id = str(rec.rid)
-	gaVariantVS.id = rec.id
+	#gaVariantVS.id = 
 	#gaVariantVS.name = 
 	#gaVariantVS.dataset_id = 
 	#gaVariantVS.metadata =
@@ -59,6 +65,6 @@ hdr = vcfFile.header
 #chromosome choice
 chromo = "ref_brca1"
 print (json_format._MessageToJsonObject(vHeader(hdr), True))
-for rec in vcfFile.fetch(chromo, 0, 1000):
+for rec in vcfFile.fetch(chromo, 0, 100):
 	print (json_format._MessageToJsonObject(vMes(rec,hdr), True))
 	print (json_format._MessageToJsonObject(vsMes(rec), True))
