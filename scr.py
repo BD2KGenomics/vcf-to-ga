@@ -1,12 +1,15 @@
 import variants_pb2
 import sys
+
 import pysam
 from pysam import VariantFile
+
 import google.protobuf.json_format as json_format
 import time
+import uuid
 import google.protobuf.struct_pb2 as struct_pb2
 
-#this function taken from ga4gh/datamodel/variants.py
+#this function taken from ga4gh/datamodel/variants.py.
 def _encodeValue(value):
     if isinstance(value, (list, tuple)):
         return [struct_pb2.Value(string_value=str(v)) for v in value]
@@ -14,8 +17,9 @@ def _encodeValue(value):
         return [struct_pb2.Value(string_value=str(value))]
 
 def vMes(rec,hdr):
+	ranId = uuid.uuid4()
 	gaVariant = variants_pb2.Variant()
-	gaVariant.id = rec.id #rec.id is rsID which fits with variant.names description in variants.proto
+	gaVariant.id = str(ranId)
 	gaVariant.reference_name = rec.contig
 	if rec.id is not None:
 		gaVariant.names.append(rec.id)
