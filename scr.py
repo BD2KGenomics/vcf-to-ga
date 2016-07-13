@@ -15,6 +15,7 @@ def _encodeValue(value):
         return [struct_pb2.Value(string_value=str(v)) for v in value]
     else:
         return [struct_pb2.Value(string_value=str(value))]
+
 def vHeader(hdr):
 	ranId = uuid.uuid4()
  	gaVariantMD = variants_pb2.VariantSetMetadata()
@@ -51,13 +52,14 @@ def csMes(hdr, rec):
 	#gaVariantCS.info map
 	return gaVariantCS
 
-def callMes(rec,hdr):
+def callMes(rec,hdr,vcfFile):
 	ranId = uuid.uuid4()
 	gaVariantC = variants_pb2.Call()
 	#gaVariantC.call_set_name = gaVariantCS.name
 	gaVariantC.call_set_id = str(ranId)
-	#for gt,rec in v.samples.items():
-		#gaVariantC.genotype =
+	for x, site in enumerate(vcfFile):
+		for ss, rec in site.samples.items():
+			gaVariantC.genotype.extend(rec.allele_indices)
 	#gaVariantC.phaseset =
 	#for key,value in rec.info:
 		#if value is not None:
@@ -103,4 +105,4 @@ for rec in vcfFile.fetch(chromo, 0, 100):
 	print (json_format._MessageToJsonObject(vMes(rec,hdr), True))
 	print (json_format._MessageToJsonObject(vsMes(rec), True))
 	print (json_format._MessageToJsonObject(csMes(hdr,rec), True))
-	print (json_format._MessageToJsonObject(callMes(rec,hdr), True))
+	print (json_format._MessageToJsonObject(callMes(rec,hdr,vcfFile), True))
