@@ -56,9 +56,8 @@ def callMes(rec,hdr):
 	gaVariantC = variants_pb2.Call()
 	#gaVariantC.call_set_name = gaVariantCS.name
 	gaVariantC.call_set_id = str(ranId)
-	for key, value in rec.format.iteritems():
-		if key == 'GT' and value is not None:			
-			gaVariantC.genotype.extend(value)
+	#for gt,rec in v.samples.items():
+		#gaVariantC.genotype =
 	#gaVariantC.phaseset =
 	#for key,value in rec.info:
 		#if value is not None:
