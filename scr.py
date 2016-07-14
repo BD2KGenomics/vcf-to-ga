@@ -1,6 +1,6 @@
 import variants_pb2
 import sys
-
+import os
 import pysam
 from pysam import VariantFile
 
@@ -9,6 +9,25 @@ import time
 import uuid
 import google.protobuf.struct_pb2 as struct_pb2
 
+import argparse
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-i", "--input", dest="input", help="Input file")
+parser.add_argument("-o", "--output", dest="output", help="Output file")
+p = parser.parse_args()
+
+assert p.input and p.output
+
+
+#Main
+vcfFile = pysam.VariantFile(p.input)
+sys.stdout = open(p.output,"w")
+hdr = vcfFile.header
+#chromosome choice
+chromo = "ref_brca1"
+sampleNames = list(hdr.samples)
+vsID = uuid.uuid4()
 #this function taken from ga4gh/datamodel/variants.py.
 def _encodeValue(value):
     if isinstance(value, (list, tuple)):
@@ -16,93 +35,78 @@ def _encodeValue(value):
     else:
         return [struct_pb2.Value(string_value=str(value))]
 
+
 def vHeader(hdr):
 	ranId = uuid.uuid4()
  	gaVariantMD = variants_pb2.VariantSetMetadata()
- 	for key,value in hdr.info.iteritems():
-		gaVariantMD.info[key]
+ 	gaVariantMD.info = hdr.info.items()
  	gaVariantMD.id = str(ranId)
- 	#gaVariantMD.type = hdr.
+ 	formats = hdr.formats.items()
+ 	gaVariantMD.type = str(formats).strip('[]')
  	#gaVariantMD.number = 
  	gaVariantMD.description = str(vcfFile.description)
- 	gaVariantMD.key = str(_encodeValue(hdr.info.keys))
- 	for value in hdr.info.itervalues():
- 		#if value is not None:
- 		gaVariantMD.value = str(value)
+ 	#gaVariantMD.key = str(list(hdr.info))
+ 	#gaVariantMD.value = 
  	return gaVariantMD
 
-def vsMes(rec):
+def variantSet(variant):
 	ranId = uuid.uuid4()
 	gaVariantVS = variants_pb2.VariantSet()
-	gaVariantVS.reference_set_id = str(ranId) #pysam has an option of rec.rid (reference id, but shows up as just a 0)
-	gaVariantVS.id = str(ranId)
-	gaVariantVS.name = rec.contig
+	gaVariantVS.reference_set_id = str(variant.rid)
+	gaVariantVS.id = str(vsID)
+	gaVariantVS.name = variant.contig
 	gaVariantVS.dataset_id = str(ranId)
 	#gaVariantVS.metadata = 
 	return gaVariantVS
 
-def csMes(hdr, rec):
-	ranId = uuid.uuid4()
+def callSet(variant):
 	gaVariantCS = variants_pb2.CallSet()
-	gaVariantCS.name = str(list(hdr.samples))
+	ranId = uuid.uuid4()
+	gaVariantCS.name = str(sampleNames)
 	gaVariantCS.bio_sample_id = str(ranId)
-	#gaVariantCS.variant_set_ids = gaVariantVS.id
+	gaVariantCS.variant_set_ids.append(str(vsID))
 	gaVariantCS.created = int(time.time())
 	gaVariantCS.updated = int(time.time())
 	#gaVariantCS.info map
 	return gaVariantCS
 
-def callMes(rec,hdr,vcfFile):
+def callMes(variant):
 	ranId = uuid.uuid4()
 	gaVariantC = variants_pb2.Call()
-	#gaVariantC.call_set_name = gaVariantCS.name
+	cs = callSet(variant)
+	gaVariantC.call_set_name = cs.name
 	gaVariantC.call_set_id = str(ranId)
-	for x, site in enumerate(vcfFile):
-		for ss, rec in site.samples.items():
-			gaVariantC.genotype.extend(rec.allele_indices)
+	#gaVariantC.genotype = where are you
 	#gaVariantC.phaseset =
-	#for key,value in rec.info:
-		#if value is not None:
-			#gaVariantC.genotype_likelihood
+	#for key, value in 
+	#gaVariant.genotype_likelihood
 	#gaVariantC.info = #optional
 	return gaVariantC
 
-def vMes(rec,hdr):
+def vMes(variant):
 	ranId = uuid.uuid4()
 	gaVariant = variants_pb2.Variant()
-	#gaVariant.variant_set_id =
+	call = variantSet(variant)
+	gaVariant.variant_set_id = call.id
 	gaVariant.id = str(ranId)
-	gaVariant.reference_name = rec.contig
-	if rec.id is not None:
-		gaVariant.names.append(rec.id)
+	gaVariant.reference_name = variant.contig
+	if variant.id is not None:
+		gaVariant.names.append(variant.id)
 	gaVariant.created = int(time.time())
 	gaVariant.updated = int(time.time())
-	gaVariant.start = rec.start
-	gaVariant.end = rec.stop
-	gaVariant.reference_bases = rec.ref
-	if rec.alts is not None:
-		gaVariant.alternate_bases.extend(list(rec.alts))
-	for key, value in rec.info.iteritems():
+	gaVariant.start = variant.start
+	gaVariant.end = variant.stop
+	gaVariant.reference_bases = variant.ref
+	if variant.alts is not None:
+		gaVariant.alternate_bases.extend(list(variant.alts))
+	for key, value in variant.info.iteritems():
 		if value is not None:
 			gaVariant.info[key].values.extend(_encodeValue(value))
-	#for callsetid in callsetids:
-		#gaVariant.calls.add()
+	#for calls in callMes(variant):
+		#gaVariant.calls.add().
 	return gaVariant
 
-#Main 
-#output raw protobuf
-#VCF file to read
-file = sys.argv[1]
-#file to output to
-ofile = sys.argv[2]
-sys.stdout = open(ofile, "w")
-vcfFile = pysam.VariantFile(file)
-hdr = vcfFile.header
-#chromosome choice
-chromo = "ref_brca1"
-print (json_format._MessageToJsonObject(vHeader(hdr), True))
-for rec in vcfFile.fetch(chromo, 0, 100):
-	print (json_format._MessageToJsonObject(vMes(rec,hdr), True))
-	print (json_format._MessageToJsonObject(vsMes(rec), True))
-	print (json_format._MessageToJsonObject(csMes(hdr,rec), True))
-	print (json_format._MessageToJsonObject(callMes(rec,hdr,vcfFile), True))
+
+#print (json_format._MessageToJsonObject(vHeader(hdr), True))
+for variant in vcfFile.fetch(chromo, 0, 100):
+	print (json_format._MessageToJsonObject(vMes(variant), True))
