@@ -3,7 +3,7 @@ import sys
 import os
 import pysam
 from pysam import VariantFile
-
+import json
 import google.protobuf.json_format as json_format
 import time
 import uuid
@@ -27,6 +27,7 @@ hdr = vcfFile.header
 chromo = "ref_brca1"
 sampleNames = list(hdr.samples)
 vsID = uuid.uuid4()
+call_set_id = uuid.uuid4()
 #this function taken from ga4gh/datamodel/variants.py.
 def _encodeValue(value):
     if isinstance(value, (list, tuple)):
@@ -58,7 +59,7 @@ def variantSet(variant):
 	#gaVariantVS.metadata = 
 	return gaVariantVS
 
-def callSet(variant):
+def callSet():
 	gaVariantCS = variants_pb2.CallSet()
 	ranId = uuid.uuid4()
 	gaVariantCS.name = str(sampleNames)
@@ -70,12 +71,10 @@ def callSet(variant):
 	return gaVariantCS
 
 def callMes(call_record, sample_name):
-	ranId = uuid.uuid4()
 	gaVariantC = variants_pb2.Call()
-	#callSet
 	gaVariantC.call_set_name = sample_name
-	gaVariantC.call_set_id = str(ranId)
-	#gaVariantC.genotype = 
+	gaVariantC.call_set_id = str(call_set_id)
+	gaVariantC.genotype.extend(list(call_record.allele_indices))
 	#gaVariantC.phaseset =
 	#gaVariant.genotype_likelihood =
 	#gaVariantC.info = #optional
@@ -102,11 +101,11 @@ def vMes(variant):
 			gaVariant.info[key].values.extend(_encodeValue(value))
 	for sample_name in sampleNames:
 		call_record = variant.samples[sample_name]
-		gaVariant.calls.extend(callMes(call_record,sample_name))
+		gaVariant.calls.extend([callMes(call_record,sample_name)]) #TypeError: 'Call' object not iterable
 	return gaVariant
 
 fout = open(p.output,"w")
-#print (json_format._MessageToJsonObject(vHeader(hdr), True))
+fout.write (json.dumps(json_format._MessageToJsonObject(vHeader(hdr), True)))
 for variant in vcfFile.fetch(chromo, 0, 100):
-	fout.write (json_format._MessageToJsonObject(vMes(variant), True))
+	fout.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
 fout.close()
