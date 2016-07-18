@@ -22,7 +22,6 @@ assert p.input and p.output
 
 #Main
 vcfFile = pysam.VariantFile(p.input)
-sys.stdout = open(p.output,"w")
 hdr = vcfFile.header
 #chromosome choice
 chromo = "ref_brca1"
@@ -70,16 +69,15 @@ def callSet(variant):
 	#gaVariantCS.info map
 	return gaVariantCS
 
-def callMes(variant):
+def callMes(call_record, sample_name):
 	ranId = uuid.uuid4()
 	gaVariantC = variants_pb2.Call()
-	cs = callSet(variant)
-	gaVariantC.call_set_name = cs.name
+	#callSet
+	gaVariantC.call_set_name = sample_name
 	gaVariantC.call_set_id = str(ranId)
-	#gaVariantC.genotype = where are you
+	#gaVariantC.genotype = 
 	#gaVariantC.phaseset =
-	#for key, value in 
-	#gaVariant.genotype_likelihood
+	#gaVariant.genotype_likelihood =
 	#gaVariantC.info = #optional
 	return gaVariantC
 
@@ -102,11 +100,13 @@ def vMes(variant):
 	for key, value in variant.info.iteritems():
 		if value is not None:
 			gaVariant.info[key].values.extend(_encodeValue(value))
-	#for calls in callMes(variant):
-		#gaVariant.calls.add().
+	for sample_name in sampleNames:
+		call_record = variant.samples[sample_name]
+		gaVariant.calls.extend(callMes(call_record,sample_name))
 	return gaVariant
 
-
+fout = open(p.output,"w")
 #print (json_format._MessageToJsonObject(vHeader(hdr), True))
 for variant in vcfFile.fetch(chromo, 0, 100):
-	print (json_format._MessageToJsonObject(vMes(variant), True))
+	fout.write (json_format._MessageToJsonObject(vMes(variant), True))
+fout.close()
