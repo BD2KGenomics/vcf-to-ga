@@ -3,6 +3,7 @@ import sys
 import os
 import pysam
 from pysam import VariantFile
+
 import json
 import google.protobuf.json_format as json_format
 import time
@@ -39,13 +40,16 @@ def _encodeValue(value):
 def vHeader(hdr):
 	ranId = uuid.uuid4()
  	gaVariantMD = variants_pb2.VariantSetMetadata()
- 	gaVariantMD.info = hdr.info.items()
- 	gaVariantMD.id = str(ranId)
- 	formats = hdr.formats.items()
+ 	for key, description in hdr.info.items():
+ 		if description is not None:
+ 			des = _encodeValue(description)
+ 			gaVariantMD.info[key].values.extend(list(des))
+	gaVariantMD.id = str(ranId)
+ 	formats = list(hdr.formats)
  	gaVariantMD.type = str(formats).strip('[]')
  	#gaVariantMD.number = 
  	gaVariantMD.description = str(vcfFile.description)
- 	#gaVariantMD.key = str(list(hdr.info))
+ 	#gaVariantMD.key = 
  	#gaVariantMD.value = 
  	return gaVariantMD
 
@@ -59,11 +63,11 @@ def variantSet(variant):
 	#gaVariantVS.metadata = 
 	return gaVariantVS
 
-def callSet():
+def callSet(call_record):
 	gaVariantCS = variants_pb2.CallSet()
 	ranId = uuid.uuid4()
 	gaVariantCS.name = str(sampleNames)
-	gaVariantCS.bio_sample_id = str(ranId)
+	#gaVariantCS.bio_sample_id = //The BioSample the call set data was generated from. string bio_sample_id = 3;
 	gaVariantCS.variant_set_ids.append(str(vsID))
 	gaVariantCS.created = int(time.time())
 	gaVariantCS.updated = int(time.time())
@@ -75,16 +79,22 @@ def callMes(call_record, sample_name):
 	gaVariantC.call_set_name = sample_name
 	gaVariantC.call_set_id = str(call_set_id)
 	gaVariantC.genotype.extend(list(call_record.allele_indices))
-	#gaVariantC.phaseset =
-	#gaVariant.genotype_likelihood =
-	#gaVariantC.info = #optional
+	if call_record.phased:
+		phaseset = str(call_record.phased)	
+	gaVariantC.phaseset = str(phaseset)
+	for key, value in call_record.iteritems():
+		if key == 'GL' and value is not None:
+			gtlikelihood = value
+			gaVariantC.genotype_likelihood.extend(list(gtlikelihood))
+	#gaVariantC.info = 
+	callSet(call_record)
 	return gaVariantC
 
 def vMes(variant):
 	ranId = uuid.uuid4()
 	gaVariant = variants_pb2.Variant()
-	call = variantSet(variant)
-	gaVariant.variant_set_id = call.id
+	vs = variantSet(variant)
+	gaVariant.variant_set_id = str(vs.id)
 	gaVariant.id = str(ranId)
 	gaVariant.reference_name = variant.contig
 	if variant.id is not None:
@@ -101,7 +111,7 @@ def vMes(variant):
 			gaVariant.info[key].values.extend(_encodeValue(value))
 	for sample_name in sampleNames:
 		call_record = variant.samples[sample_name]
-		gaVariant.calls.extend([callMes(call_record,sample_name)]) #TypeError: 'Call' object not iterable
+		gaVariant.calls.extend([callMes(call_record,sample_name)])
 	return gaVariant
 
 fout = open(p.output,"w")
