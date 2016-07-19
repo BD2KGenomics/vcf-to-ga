@@ -47,8 +47,8 @@ def vHeader(hdr):
 	gaVariantMD.id = str(ranId)
  	formats = list(hdr.formats)
  	gaVariantMD.type = str(formats).strip('[]')
- 	#gaVariantMD.number = 
  	gaVariantMD.description = str(vcfFile.description)
+ 	#gaVariantMD.number = 
  	#gaVariantMD.key = 
  	#gaVariantMD.value = 
  	return gaVariantMD
@@ -67,7 +67,7 @@ def callSet(call_record):
 	gaVariantCS = variants_pb2.CallSet()
 	ranId = uuid.uuid4()
 	gaVariantCS.name = str(sampleNames)
-	#gaVariantCS.bio_sample_id = //The BioSample the call set data was generated from. string bio_sample_id = 3;
+	#gaVariantCS.bio_sample_id = //Leave blank
 	gaVariantCS.variant_set_ids.append(str(vsID))
 	gaVariantCS.created = int(time.time())
 	gaVariantCS.updated = int(time.time())
