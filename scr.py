@@ -7,11 +7,12 @@ from pysam import VariantFile
 import json
 import google.protobuf.json_format as json_format
 import time
+import progressbar
 import uuid
 import google.protobuf.struct_pb2 as struct_pb2
 
+#for command line arguments
 import argparse
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", dest="input", help="Input file")
@@ -19,7 +20,9 @@ parser.add_argument("-o", "--output", dest="output", help="Output file")
 p = parser.parse_args()
 
 assert p.input and p.output
-
+#progress indicator for file
+widgets = [progressbar.Timer()]
+pBar = progressbar.ProgressBar(widgets=widgets, max_value=100).start()
 
 #Main
 vcfFile = pysam.VariantFile(p.input)
@@ -37,21 +40,23 @@ def _encodeValue(value):
         return [struct_pb2.Value(string_value=str(value))]
 
 
+def vsMetadata(key, type1, number, description):
+	gaVariant_metaData = variants_pb2.VariantSetMetadata()
+	gaVariant_metaData.key = key
+	#gaVariant_metaData.value = value
+	gaVariant_metaData.type = type1
+	gaVariant_metaData.number = str(number)
+	gaVariant_metaData.description = description
+	return gaVariant_metaData
+
 def vHeader(hdr):
-	ranId = uuid.uuid4()
- 	gaVariantMD = variants_pb2.VariantSetMetadata()
- 	for key, description in hdr.info.items():
- 		if description is not None:
- 			des = _encodeValue(description)
- 			gaVariantMD.info[key].values.extend(list(des))
-	gaVariantMD.id = str(ranId)
- 	formats = list(hdr.formats)
- 	gaVariantMD.type = str(formats).strip('[]')
- 	gaVariantMD.description = str(vcfFile.description)
- 	#gaVariantMD.number = 
- 	#gaVariantMD.key = 
- 	#gaVariantMD.value = 
- 	return gaVariantMD
+ 	formats = hdr.formats.items()
+	infos = hdr.info.items()
+	meta = []
+	for prefix, content in [("Format", formats), ("Info", infos)]:
+		for key, value in content:
+			meta.append(vsMetadata(key,value.type,value.number,value.description))
+	return meta		
 
 def variantSet(variant):
 	ranId = uuid.uuid4()
@@ -63,15 +68,14 @@ def variantSet(variant):
 	#gaVariantVS.metadata = 
 	return gaVariantVS
 
-def callSet(call_record):
+def callSet():
 	gaVariantCS = variants_pb2.CallSet()
-	ranId = uuid.uuid4()
 	gaVariantCS.name = str(sampleNames)
 	#gaVariantCS.bio_sample_id = //Leave blank
 	gaVariantCS.variant_set_ids.append(str(vsID))
 	gaVariantCS.created = int(time.time())
 	gaVariantCS.updated = int(time.time())
-	#gaVariantCS.info map
+	#gaVariantCS.info = //seems useless
 	return gaVariantCS
 
 def callMes(call_record, sample_name):
@@ -87,14 +91,13 @@ def callMes(call_record, sample_name):
 			gtlikelihood = value
 			gaVariantC.genotype_likelihood.extend(list(gtlikelihood))
 	#gaVariantC.info = 
-	callSet(call_record)
+	#callSet(////)
 	return gaVariantC
 
 def vMes(variant):
 	ranId = uuid.uuid4()
 	gaVariant = variants_pb2.Variant()
-	vs = variantSet(variant)
-	gaVariant.variant_set_id = str(vs.id)
+	gaVariant.variant_set_id = str(vsID)
 	gaVariant.id = str(ranId)
 	gaVariant.reference_name = variant.contig
 	if variant.id is not None:
