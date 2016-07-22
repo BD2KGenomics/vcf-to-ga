@@ -15,10 +15,12 @@ import google.protobuf.struct_pb2 as struct_pb2
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-i", "--input", dest="input", help="Input file")
-parser.add_argument("-o", "--output", dest="output", help="Output file")
+parser.add_argument("-d","--directory", help="directory to use")
+parser.add_argument("-i", "--input", help="Input file")
+parser.add_argument("-o", "--output", help="Output file")
 p = parser.parse_args()
 
+assert p.directory
 assert p.input and p.output
 #progress indicator for file
 widgets = [progressbar.Timer()]
@@ -31,7 +33,8 @@ hdr = vcfFile.header
 chromo = "ref_brca1"
 sampleNames = list(hdr.samples)
 vsID = uuid.uuid4()
-call_set_id = uuid.uuid4()
+
+
 #this function taken from ga4gh/datamodel/variants.py.
 def _encodeValue(value):
     if isinstance(value, (list, tuple)):
@@ -63,7 +66,7 @@ def variantSet(hdr):
 	gaVariantVS = variants_pb2.VariantSet()
 	#gaVariantVS.reference_set_id = 
 	gaVariantVS.id = str(vsID)
-	gaVariantVS.name = str(hdr.contigs)
+	gaVariantVS.name = list(str(hdr.contigs))
 	gaVariantVS.dataset_id = str(ranId)
 	gaVariantVS.metadata.extend(vHeader(hdr))
 	return gaVariantVS
@@ -80,6 +83,7 @@ def callSet():
 
 def callMes(call_record, sample_name):
 	gaVariantC = variants_pb2.Call()
+	call_set_id = uuid.uuid4()
 	gaVariantC.call_set_name = sample_name
 	gaVariantC.call_set_id = str(call_set_id)
 	gaVariantC.genotype.extend(list(call_record.allele_indices))
