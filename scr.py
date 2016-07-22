@@ -43,7 +43,7 @@ def _encodeValue(value):
 def vsMetadata(key, type1, number, description):
 	gaVariant_metaData = variants_pb2.VariantSetMetadata()
 	gaVariant_metaData.key = key
-	#gaVariant_metaData.value = value
+	#gaVariant_metaData.value = value //same as key
 	gaVariant_metaData.type = type1
 	gaVariant_metaData.number = str(number)
 	gaVariant_metaData.description = description
@@ -58,14 +58,14 @@ def vHeader(hdr):
 			meta.append(vsMetadata(key,value.type,value.number,value.description))
 	return meta		
 
-def variantSet(variant):
+def variantSet(hdr):
 	ranId = uuid.uuid4()
 	gaVariantVS = variants_pb2.VariantSet()
-	gaVariantVS.reference_set_id = str(variant.rid)
+	#gaVariantVS.reference_set_id = 
 	gaVariantVS.id = str(vsID)
-	gaVariantVS.name = variant.contig
+	gaVariantVS.name = str(hdr.contigs)
 	gaVariantVS.dataset_id = str(ranId)
-	#gaVariantVS.metadata = 
+	gaVariantVS.metadata.extend(vHeader(hdr))
 	return gaVariantVS
 
 def callSet():
@@ -90,8 +90,8 @@ def callMes(call_record, sample_name):
 		if key == 'GL' and value is not None:
 			gtlikelihood = value
 			gaVariantC.genotype_likelihood.extend(list(gtlikelihood))
-	#gaVariantC.info = 
-	#callSet(////)
+	#gaVariantC.info 
+	callSet()
 	return gaVariantC
 
 def vMes(variant):
@@ -118,7 +118,7 @@ def vMes(variant):
 	return gaVariant
 
 fout = open(p.output,"w")
-fout.write (json.dumps(json_format._MessageToJsonObject(vHeader(hdr), True)))
+fout.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
 for variant in vcfFile.fetch(chromo, 0, 100):
 	fout.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
 fout.close()
