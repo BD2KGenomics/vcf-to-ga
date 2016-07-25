@@ -11,7 +11,7 @@ import progressbar
 import uuid
 import google.protobuf.struct_pb2 as struct_pb2
 
-#for command line arguments
+#command line argument parser
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -20,8 +20,9 @@ parser.add_argument("-i", "--input", help="Input file")
 parser.add_argument("-o", "--output", help="Output file")
 p = parser.parse_args()
 
-assert p.directory
-assert p.input and p.output
+#assert p.directory and p.output
+assert p.input
+
 #progress indicator for file
 widgets = [progressbar.Timer()]
 pBar = progressbar.ProgressBar(widgets=widgets, max_value=100).start()
@@ -30,10 +31,28 @@ pBar = progressbar.ProgressBar(widgets=widgets, max_value=100).start()
 vcfFile = pysam.VariantFile(p.input)
 hdr = vcfFile.header
 #chromosome choice
-chromo = "chr1"
+chromo = "1"
 sampleNames = list(hdr.samples)
-vsID = uuid.uuid4()
+vsID = str(uuid.uuid4())
 
+
+def _output():
+	if not os.path.exists("output2/variantSet/variants/calls/callsets"):
+		os.makedirs("output2/variantSet/variants/calls/callsets")
+	vSet_FileName = vsID + '.txt'
+	fout1 = open(os.path.join("output2/variantSet", vSet_FileName), 'w')
+	fout1.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
+	count = 0;
+	for variant in vcfFile.fetch(chromo, 0, 10000):
+		v_FileName = variant.id + '.txt'
+		if not os.path.isfile(v_FileName):
+			fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
+		count += 1
+		pBar.update(count)  
+		fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
+	fout1.close()
+	fout2.close()
+	return
 
 #this function taken from ga4gh/datamodel/variants.py.
 def _encodeValue(value):
@@ -78,6 +97,12 @@ def callSet():
 	gaVariantCS.created = int(time.time())
 	gaVariantCS.updated = int(time.time())
 	#gaVariantCS.info = //seems useless
+	cs_FileName = "Call_Sets"
+	cs_txt_FileName = cs_FileName + '.txt'
+	if not os.path.isfile(cs_txt_FileName):
+			fout4 = open(os.path.join("output2/variantSet/variants/calls/callsets", cs_txt_FileName), 'w')
+			fout4.write (json.dumps(json_format._MessageToJsonObject(gaVariantCS, True)))
+	fout4.close()
 	return gaVariantCS
 
 def callMes(call_record, sample_name):
@@ -94,6 +119,12 @@ def callMes(call_record, sample_name):
 			gtlikelihood = value
 			gaVariantC.genotype_likelihood.extend(list(gtlikelihood))
 	#gaVariantC.info 
+	c_FileName = gaVariantC.call_set_id
+	c_txt_FileName = c_FileName + '.txt'
+	if not os.path.isfile(c_txt_FileName):
+			fout3 = open(os.path.join("output2/variantSet/variants/calls", c_txt_FileName), 'w')
+			fout3.write (json_format._MessageToJsonObject(gaVariantC, True))
+	fout3.close()
 	callSet()
 	return gaVariantC
 
@@ -119,16 +150,5 @@ def vMes(variant):
 		call_record = variant.samples[sample_name]
 		gaVariant.calls.extend([callMes(call_record,sample_name)])
 	return gaVariant
-
-def _output():
-	directory = p.directory
-	if not os.path.exists(directory):
-		os.makedirs(directory)
-	fout = open(os.path.join(directory, p.output), "w")
-	fout.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
-	for variant in vcfFile.fetch(chromo, 0, 100):
-		fout.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
-	fout.close()
-	return
 
 _output()
