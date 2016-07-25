@@ -30,7 +30,7 @@ pBar = progressbar.ProgressBar(widgets=widgets, max_value=100).start()
 vcfFile = pysam.VariantFile(p.input)
 hdr = vcfFile.header
 #chromosome choice
-chromo = "ref_brca1"
+chromo = "chr1"
 sampleNames = list(hdr.samples)
 vsID = uuid.uuid4()
 
@@ -41,7 +41,6 @@ def _encodeValue(value):
         return [struct_pb2.Value(string_value=str(v)) for v in value]
     else:
         return [struct_pb2.Value(string_value=str(value))]
-
 
 def vsMetadata(key, type1, number, description):
 	gaVariant_metaData = variants_pb2.VariantSetMetadata()
@@ -66,7 +65,7 @@ def variantSet(hdr):
 	gaVariantVS = variants_pb2.VariantSet()
 	#gaVariantVS.reference_set_id = 
 	gaVariantVS.id = str(vsID)
-	gaVariantVS.name = list(str(hdr.contigs))
+	gaVariantVS.name = str(hdr.contigs)
 	gaVariantVS.dataset_id = str(ranId)
 	gaVariantVS.metadata.extend(vHeader(hdr))
 	return gaVariantVS
@@ -121,8 +120,15 @@ def vMes(variant):
 		gaVariant.calls.extend([callMes(call_record,sample_name)])
 	return gaVariant
 
-fout = open(p.output,"w")
-fout.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
-for variant in vcfFile.fetch(chromo, 0, 100):
-	fout.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
-fout.close()
+def _output():
+	directory = p.directory
+	if not os.path.exists(directory):
+		os.makedirs(directory)
+	fout = open(os.path.join(directory, p.output), "w")
+	fout.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
+	for variant in vcfFile.fetch(chromo, 0, 100):
+		fout.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
+	fout.close()
+	return
+
+_output()
