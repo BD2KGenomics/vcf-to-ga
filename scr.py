@@ -18,41 +18,19 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-d","--directory", help="directory to use")
 parser.add_argument("-i", "--input", help="Input file")
 parser.add_argument("-o", "--output", help="Output file")
+parser.add_argument("-db", "--database", help="database output")
 p = parser.parse_args()
 
 #assert p.directory and p.output
 assert p.input
 
-#progress indicator for file
-widgets = [progressbar.Timer()]
-pBar = progressbar.ProgressBar(widgets=widgets, max_value=100).start()
-
 #Main
+
 vcfFile = pysam.VariantFile(p.input)
 hdr = vcfFile.header
 #chromosome choice
-chromo = "1"
 sampleNames = list(hdr.samples)
 vsID = str(uuid.uuid4())
-
-
-def _output():
-	if not os.path.exists("output2/variantSet/variants/calls/callsets"):
-		os.makedirs("output2/variantSet/variants/calls/callsets")
-	vSet_FileName = vsID + '.txt'
-	fout1 = open(os.path.join("output2/variantSet", vSet_FileName), 'w')
-	fout1.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
-	count = 0;
-	for variant in vcfFile.fetch(chromo, 0, 10000):
-		v_FileName = variant.id + '.txt'
-		if not os.path.isfile(v_FileName):
-			fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
-		count += 1
-		pBar.update(count)  
-		fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
-	fout1.close()
-	fout2.close()
-	return
 
 #this function taken from ga4gh/datamodel/variants.py.
 def _encodeValue(value):
@@ -60,6 +38,13 @@ def _encodeValue(value):
         return [struct_pb2.Value(string_value=str(v)) for v in value]
     else:
         return [struct_pb2.Value(string_value=str(value))]
+
+def get_db(p.database):
+	from pymongo import MongoClient
+	client = MongoClient()
+    dbname = "client." + p.database
+    db = dbname
+    return db
 
 def vsMetadata(key, type1, number, description):
 	gaVariant_metaData = variants_pb2.VariantSetMetadata()
@@ -89,7 +74,7 @@ def variantSet(hdr):
 	gaVariantVS.metadata.extend(vHeader(hdr))
 	return gaVariantVS
 
-def callSet():
+def callSet(sampleNames):
 	gaVariantCS = variants_pb2.CallSet()
 	gaVariantCS.name = str(sampleNames)
 	#gaVariantCS.bio_sample_id = //Leave blank
@@ -123,9 +108,9 @@ def callMes(call_record, sample_name):
 	c_txt_FileName = c_FileName + '.txt'
 	if not os.path.isfile(c_txt_FileName):
 			fout3 = open(os.path.join("output2/variantSet/variants/calls", c_txt_FileName), 'w')
-			fout3.write (json_format._MessageToJsonObject(gaVariantC, True))
+			fout3.write (json.dumps(json_format._MessageToJsonObject(gaVariantC, True)))
 	fout3.close()
-	callSet()
+	callSet(sampleNames)
 	return gaVariantC
 
 def vMes(variant):
@@ -151,4 +136,24 @@ def vMes(variant):
 		gaVariant.calls.extend([callMes(call_record,sample_name)])
 	return gaVariant
 
-_output()
+if not os.path.exists("output2/variantSet/variants/calls/callsets"):
+	os.makedirs("output2/variantSet/variants/calls/callsets")
+vSet_FileName = vsID + '.txt'
+fout1 = open(os.path.join("output2/variantSet", vSet_FileName), 'w')
+fout1.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
+fout1.close()
+#progress indicator for file
+widgets = [progressbar.Timer()]
+pBar = progressbar.ProgressBar(widgets=widgets, max_value=100).start()
+if assert p.database:
+	get_db(p.database)
+	#insert variantset, variant, calls, callset
+#for i in range(5):
+	for variant in vcfFile.fetch("ref_brca1",0,1000):
+		v_FileName = variant.id + '.txt'
+		if not os.path.isfile(v_FileName):
+			fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
+			fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
+			#pBar.update(i)
+#pBar.finish()
+fout2.close()
