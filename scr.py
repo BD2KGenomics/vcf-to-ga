@@ -19,32 +19,38 @@ parser.add_argument("-d","--directory", help="directory to use")
 parser.add_argument("-i", "--input", help="Input file")
 parser.add_argument("-o", "--output", help="Output file")
 parser.add_argument("-db", "--database", help="database output")
+parser.add_argument("-ch", "--chromosome", help="Chromosome choice")
 p = parser.parse_args()
 
-assert p.database
 assert p.input
+#assert p.chromosome
 
 #progress indicator for file need to add update
 widgets = [progressbar.Timer()]
 pBar = progressbar.ProgressBar(widgets=widgets, max_value=100).start()
-#Main
+
+def get_db(pdatabase):
+	client = MongoClient()
+	db = client.test_vcf
+	return db
 
 vcfFile = pysam.VariantFile(p.input)
 hdr = vcfFile.header
 sampleNames = list(hdr.samples)
 vsID = str(uuid.uuid4())
-
+#chrom = p.chromosome
+if p.database is not None:
+	db = get_db(p.database)
+	variantset = db.VariantSet
+	variantd = db.Variants
+	calls = db.Calls
+	callset = db.CallSets
 #this function taken from ga4gh/datamodel/variants.py.
 def _encodeValue(value):
     if isinstance(value, (list, tuple)):
         return [struct_pb2.Value(string_value=str(v)) for v in value]
     else:
         return [struct_pb2.Value(string_value=str(value))]
-
-def get_db(pdatabase):
-	client = MongoClient()
-	db = client.test_vcf
-	return db
 
 def vsMetadata(key, type1, number, description):
 	gaVariant_metaData = variants_pb2.VariantSetMetadata()
@@ -88,7 +94,8 @@ def callSet(sampleNames):
 			fout4 = open(os.path.join("output2/variantSet/variants/calls/callsets", cs_txt_FileName), 'w')
 			fout4.write (json.dumps(json_format._MessageToJsonObject(gaVariantCS, True)))
 	fout4.close()
-	callset.insert_one(json_format._MessageToJsonObject(gaVariantCS, True))
+	if "db" in globals():
+		callset.insert_one(json_format._MessageToJsonObject(gaVariantCS, True))
 	return gaVariantCS
 
 def callMes(call_record, sample_name):
@@ -111,7 +118,8 @@ def callMes(call_record, sample_name):
 			fout3 = open(os.path.join("output2/variantSet/variants/calls", c_txt_FileName), 'w')
 			fout3.write (json.dumps(json_format._MessageToJsonObject(gaVariantC, True)))
 	fout3.close()
-	calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
+	if "db" in globals():
+		calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
 	callSet(sampleNames)
 	return gaVariantC
 
@@ -138,7 +146,6 @@ def vMes(variant):
 		gaVariant.calls.extend([callMes(call_record,sample_name)])
 	return gaVariant
 
-
 if not os.path.exists("output2/variantSet/variants/calls/callsets"):
 	os.makedirs("output2/variantSet/variants/calls/callsets")
 vSet_FileName = vsID + '.txt'
@@ -146,18 +153,14 @@ fout1 = open(os.path.join("output2/variantSet", vSet_FileName), 'w')
 fout1.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
 fout1.close()
 
-db = get_db(p.database)
-variantset = db.VariantSet
-variantd = db.Variants
-calls = db.Calls
-callset = db.CallSets
-variantset.insert_one(json_format._MessageToJsonObject(variantSet(hdr), True))
+if "db" in globals():
+	variantset.insert_one(json_format._MessageToJsonObject(variantSet(hdr), True))
 
 for variant in vcfFile.fetch("ref_brca1"):
 	v_FileName = variant.id + '.txt'
-	variantd.insert_one(json_format._MessageToJsonObject(vMes(variant), True))
+	if "db" in globals():
+		variantd.insert_one(json_format._MessageToJsonObject(vMes(variant), True))
 	if not os.path.isfile(v_FileName):
 		fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
 		fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
-
 fout2.close()
