@@ -7,6 +7,7 @@ from pymongo import MongoClient
 import json
 import google.protobuf.json_format as json_format
 import time
+import datetime
 import progressbar
 import uuid
 import google.protobuf.struct_pb2 as struct_pb2
@@ -26,8 +27,8 @@ assert p.input
 #assert p.chromosome
 
 #progress indicator for file need to add update
-widgets = [progressbar.Timer()]
-pBar = progressbar.ProgressBar(widgets=widgets, max_value=100).start()
+#widgets = [progressbar.Timer()]
+#pBar = progressbar.ProgressBar(widgets=widgets, max_value=100)
 
 def get_db(pdatabase):
 	client = MongoClient()
@@ -38,7 +39,12 @@ vcfFile = pysam.VariantFile(p.input)
 hdr = vcfFile.header
 sampleNames = list(hdr.samples)
 vsID = str(uuid.uuid4())
-#chrom = p.chromosome
+
+if p.chromosome is not None:
+	chrom = p.chromosome
+else:
+	chrom = "ref_brca1"
+
 if p.database is not None:
 	db = get_db(p.database)
 	variantset = db.VariantSet
@@ -156,11 +162,15 @@ fout1.close()
 if "db" in globals():
 	variantset.insert_one(json_format._MessageToJsonObject(variantSet(hdr), True))
 
-for variant in vcfFile.fetch("ref_brca1"):
+#pBar.start()
+for variant in vcfFile.fetch(chrom):
 	v_FileName = variant.id + '.txt'
 	if "db" in globals():
 		variantd.insert_one(json_format._MessageToJsonObject(vMes(variant), True))
 	if not os.path.isfile(v_FileName):
 		fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
+		time_begin = datetime.datetime.fromtimestamp(time.time())
 		fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
+time_end = datetime.datetime.fromtimestamp(time.time())		
 fout2.close()
+print("Time elapsed: ", str(time_end - time_begin))
