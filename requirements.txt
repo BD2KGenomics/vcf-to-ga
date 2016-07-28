@@ -1,0 +1,4 @@
+progressbar
+protobuf==3.0.0b2
+pymongo
+pysam
