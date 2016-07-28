@@ -35,6 +35,7 @@ if p.chromosome is not None:
     chrom = p.chromosome
 else:
     chrom = "ref_brca1"
+
 def main():
     if p.database is not None:
         global db
@@ -69,13 +70,12 @@ def main():
         if not os.path.isfile(v_FileName):
             fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
         fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
-    pBar.finish()       
-    fout2.close()
-    return
+    pBar.finish()
+    fout2.close()       
 
 def get_db(pdatabase):
     client = MongoClient() 
-    db = client.test_vcf
+    db = client[pdatabase]
     return db
 
 #this function taken from ga4gh/datamodel/variants.py.
@@ -153,6 +153,7 @@ def callMes(call_record, sample_name):
     fout3.close()
     if "db" in globals():
         calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
+        #calls.update(variant_id)
     callSet(sampleNames)
     return gaVariantC
 
@@ -162,8 +163,10 @@ def vMes(variant):
     gaVariant.variant_set_id = str(vsID)
     gaVariant.id = str(ranId)
     gaVariant.reference_name = variant.contig
+    #variant_id = []
     if variant.id is not None:
         gaVariant.names.append(variant.id)
+        #variant_id.append(variant.id)
     gaVariant.created = int(time.time())
     gaVariant.updated = int(time.time())
     gaVariant.start = variant.start
@@ -179,5 +182,4 @@ def vMes(variant):
         gaVariant.calls.extend([callMes(call_record,sample_name)])
     return gaVariant
 
-if __name__ == "__main__": 
-    main()
+main()
