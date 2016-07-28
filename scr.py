@@ -21,7 +21,7 @@ parser.add_argument("-db", "--database", help="Database output")
 parser.add_argument("-ch", "--chromosome", help="Chromosome choice")
 p = parser.parse_args()
 
-assert p.input #and p.chromosome
+assert p.input
 
 widgets = [progressbar.Timer()]
 pBar = progressbar.ProgressBar(widgets=widgets, max_value=100)
@@ -34,7 +34,7 @@ vsID = str(uuid.uuid4())
 if p.chromosome is not None:
     chrom = p.chromosome
 else:
-    chrom = "ref_brca1"
+    chrom = None
 
 def main():
     if p.database is not None:
@@ -131,7 +131,7 @@ def callSet(sampleNames):
         callset.insert_one(json_format._MessageToJsonObject(gaVariantCS, True))
     return gaVariantCS
 
-def callMes(call_record, sample_name):
+def callMes(call_record, sample_name, variant_id):
     gaVariantC = variants_pb2.Call()
     call_set_id = uuid.uuid4()
     gaVariantC.call_set_name = sample_name
@@ -153,7 +153,7 @@ def callMes(call_record, sample_name):
     fout3.close()
     if "db" in globals():
         calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
-        #calls.update(variant_id)
+        #calls.insert_one(variant_id)
     callSet(sampleNames)
     return gaVariantC
 
@@ -163,10 +163,8 @@ def vMes(variant):
     gaVariant.variant_set_id = str(vsID)
     gaVariant.id = str(ranId)
     gaVariant.reference_name = variant.contig
-    #variant_id = []
-    if variant.id is not None:
-        gaVariant.names.append(variant.id)
-        #variant_id.append(variant.id)
+    #if variant.id is not None:
+        #gaVariant.names.append(variant.id)
     gaVariant.created = int(time.time())
     gaVariant.updated = int(time.time())
     gaVariant.start = variant.start
@@ -177,9 +175,11 @@ def vMes(variant):
     for key, value in variant.info.iteritems():
         if value is not None:
             gaVariant.info[key].values.extend(_encodeValue(value))
-    for sample_name in sampleNames:
-        call_record = variant.samples[sample_name]
-        gaVariant.calls.extend([callMes(call_record,sample_name)])
+    if variant.id is not None:
+        gaVariant.names.append(variant.id)
+        for sample_name in sampleNames:
+            call_record = variant.samples[sample_name]
+            gaVariant.calls.extend([callMes(call_record,sample_name,variant.id)])
     return gaVariant
 
 main()
