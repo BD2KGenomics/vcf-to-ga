@@ -29,7 +29,6 @@ vcfFile = pysam.VariantFile(p.input)
 hdr = vcfFile.header
 sampleNames = list(hdr.samples)
 vsID = str(uuid.uuid4())
-
 #checking if chromosome was specified
 if p.chromosome is not None:
     chrom = p.chromosome
@@ -131,7 +130,7 @@ def callSet(sampleNames):
         callset.insert_one(json_format._MessageToJsonObject(gaVariantCS, True))
     return gaVariantCS
 
-def callMes(call_record, sample_name, variant_id):
+def callMes(call_record, sample_name, variant_ids):
     gaVariantC = variants_pb2.Call()
     call_set_id = uuid.uuid4()
     gaVariantC.call_set_name = sample_name
@@ -151,9 +150,11 @@ def callMes(call_record, sample_name, variant_id):
             fout3 = open(os.path.join("output2/variantSet/variants/calls", c_txt_FileName), 'w')
             fout3.write (json.dumps(json_format._MessageToJsonObject(gaVariantC, True)))
     fout3.close()
+    #variant_id = {"variant_id": variant_ids}
+    doc = json_format._MessageToJsonObject(gaVariantC, True)
     if "db" in globals():
-        calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
-        #calls.insert_one(variant_id)
+        calls.insert_one(doc)
+        calls.update_many({}, { "$set": {"variant_id": variant_ids}}, False, True) #puts same variant.id into every document not good.
     callSet(sampleNames)
     return gaVariantC
 
@@ -163,8 +164,6 @@ def vMes(variant):
     gaVariant.variant_set_id = str(vsID)
     gaVariant.id = str(ranId)
     gaVariant.reference_name = variant.contig
-    #if variant.id is not None:
-        #gaVariant.names.append(variant.id)
     gaVariant.created = int(time.time())
     gaVariant.updated = int(time.time())
     gaVariant.start = variant.start
@@ -180,6 +179,7 @@ def vMes(variant):
         for sample_name in sampleNames:
             call_record = variant.samples[sample_name]
             gaVariant.calls.extend([callMes(call_record,sample_name,variant.id)])
+
     return gaVariant
 
 main()
