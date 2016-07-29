@@ -130,7 +130,7 @@ def callSet(sampleNames):
         callset.insert_one(json_format._MessageToJsonObject(gaVariantCS, True))
     return gaVariantCS
 
-def callMes(call_record, sample_name, variant_ids):
+def callMes(call_record, sample_name, variant_id):
     gaVariantC = variants_pb2.Call()
     call_set_id = uuid.uuid4()
     gaVariantC.call_set_name = sample_name
@@ -143,18 +143,17 @@ def callMes(call_record, sample_name, variant_ids):
         if key == 'GL' and value is not None:
             gtlikelihood = value
             gaVariantC.genotype_likelihood.extend(list(gtlikelihood))
-    #gaVariantC.info 
+    if variant_id is not None:
+        gaVariantC.info["variant_id"].append(variant_id)
     c_FileName = gaVariantC.call_set_id
     c_txt_FileName = c_FileName + '.txt'
     if not os.path.isfile(c_txt_FileName):
             fout3 = open(os.path.join("output2/variantSet/variants/calls", c_txt_FileName), 'w')
             fout3.write (json.dumps(json_format._MessageToJsonObject(gaVariantC, True)))
     fout3.close()
-    #variant_id = {"variant_id": variant_ids}
-    doc = json_format._MessageToJsonObject(gaVariantC, True)
+
     if "db" in globals():
-        calls.insert_one(doc)
-        calls.update_many({}, { "$set": {"variant_id": variant_ids}}, False, True) #puts same variant.id into every document not good.
+        calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
     callSet(sampleNames)
     return gaVariantC
 
@@ -179,7 +178,6 @@ def vMes(variant):
         for sample_name in sampleNames:
             call_record = variant.samples[sample_name]
             gaVariant.calls.extend([callMes(call_record,sample_name,variant.id)])
-
     return gaVariant
 
 main()
