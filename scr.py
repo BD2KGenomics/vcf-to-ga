@@ -40,6 +40,7 @@ def main():
         global db
         db = get_db(p.database)
         variantset = db.VariantSet
+        global variantd
         variantd = db.Variants
         global calls
         calls = db.Calls
@@ -60,34 +61,18 @@ def main():
     else:
         fout1.write (variantSet(hdr))
         fout1.close()
-    #count used to update the progressbar
-    count = 0
-    #checking if the database option was chosen
+#checking if the database option was chosen
     if "db" in globals():
         variantset.insert_one(json_format._MessageToJsonObject(variantSet(hdr), True))
+#count used to update the progressbar
+    count = 0
     pBar.start()
     for variant in vcfFile.fetch(chrom):
         count += 1
+        vMes(variant)
         if count % 100 == 0:
             pBar.update()
-        if p.protobuf is None:
-            v_FileName = variant.id + '.txt'
-        else:
-            v_FileName = variant.id + '.pb'
-        #checking if the database option was chosen
-        if "db" in globals():
-            variantd.insert_one(json_format._MessageToJsonObject(vMes(variant), True))
-        if p.protobuf is None:
-            if not os.path.isfile(v_FileName):
-                fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
-            fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
-        else:
-            if not os.path.isfile(v_FileName):
-                fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
-            fout2.write (vMes(variant))
-    pBar.finish()
-    fout2.close()  
-
+    pBar.finish()        
 def get_db(pdatabase):
     client = MongoClient() 
     db = client[pdatabase]
@@ -160,7 +145,8 @@ def callMes(call_record, sample_name, variant_id):
     call_set_id = uuid.uuid4()
     gaVariantC.call_set_name = sample_name
     gaVariantC.call_set_id = str(call_set_id)
-    gaVariantC.genotype.extend(list(call_record.allele_indices))
+    if call_record.allele_indices is not None:
+        gaVariantC.genotype.extend(list(call_record.allele_indices))
     if call_record.phased:
         phaseset = str(call_record.phased)  
     gaVariantC.phaseset = str(phaseset)
@@ -168,8 +154,7 @@ def callMes(call_record, sample_name, variant_id):
         if key == 'GL' and value is not None:
             gtlikelihood = value
             gaVariantC.genotype_likelihood.extend(list(gtlikelihood)) #GTLikelihood is not always in a VCF File
-    if variant_id is not None:
-        gaVariantC.info["variant_id"].append(variant_id)
+    gaVariantC.info["variant_id"].append(str(variant_id))
     c_FileName = gaVariantC.call_set_id
     if p.protobuf is None:
         c_txt_FileName = c_FileName + '.txt'
@@ -185,13 +170,17 @@ def callMes(call_record, sample_name, variant_id):
     if "db" in globals():
         calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
     callSet(sampleNames)
-    return gaVariantC
+    if p.protobuf is not None:
+        return gaVariantC.SerializeToString()
+    else:
+        return gaVariantC
 
 def vMes(variant):
     ranId = uuid.uuid4()
     gaVariant = variants_pb2.Variant()
     gaVariant.variant_set_id = str(vsID)
-    gaVariant.id = str(ranId)
+    variant_id = ranId
+    gaVariant.id = str(variant_id)
     gaVariant.reference_name = variant.contig
     gaVariant.created = int(time.time())
     gaVariant.updated = int(time.time())
@@ -205,9 +194,28 @@ def vMes(variant):
             gaVariant.info[key].values.extend(_encodeValue(value))
     if variant.id is not None:
         gaVariant.names.append(variant.id)
-        for sample_name in sampleNames:
-            call_record = variant.samples[sample_name]
-            gaVariant.calls.extend([callMes(call_record,sample_name,variant.id)])
+    else:
+        variant.id = None
+    for sample_name in sampleNames:
+        call_record = variant.samples[sample_name]
+        gaVariant.calls.extend([callMes(call_record,sample_name,variant_id)])
+    
+    if p.protobuf is None:
+        v_FileName = gaVariant.id + '.txt'
+    else:
+        v_FileName = gaVariant.id + '.pb'
+#checking if the database option was chosen
+    if "db" in globals():
+        variantd.insert_one(json_format._MessageToJsonObject(gaVariant, True))
+    if p.protobuf is None:
+        if not os.path.isfile(v_FileName):
+            fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
+        fout2.write (json.dumps(json_format._MessageToJsonObject(gaVariant, True)))
+    else:
+        if not os.path.isfile(v_FileName):
+            fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
+        fout2.write (gaVariant)
+    fout2.close() 
     if p.protobuf is not None:
         return gaVariant.SerializeToString()
     else:
