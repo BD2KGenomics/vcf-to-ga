@@ -60,7 +60,7 @@ def main():
     else:
         fout1.write (variantSet(hdr))
         fout1.close()
-
+    #count used to update the progressbar
     count = 0
     #checking if the database option was chosen
     if "db" in globals():
@@ -80,7 +80,7 @@ def main():
         if p.protobuf is None:
             if not os.path.isfile(v_FileName):
                 fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
-            fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant))))
+            fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
         else:
             if not os.path.isfile(v_FileName):
                 fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
@@ -121,7 +121,7 @@ def vHeader(hdr):
 def variantSet(hdr):
     ranId = uuid.uuid4()
     gaVariantVS = variants_pb2.VariantSet()
-    #gaVariantVS.reference_set_id = 
+    #gaVariantVS.reference_set_id = //in VCF files tested, this was just always 0.
     gaVariantVS.id = str(vsID)
     gaVariantVS.name = str(hdr.contigs)
     gaVariantVS.dataset_id = str(ranId)
@@ -138,7 +138,7 @@ def callSet(sampleNames):
     gaVariantCS.variant_set_ids.append(str(vsID))
     gaVariantCS.created = int(time.time())
     gaVariantCS.updated = int(time.time())
-    #gaVariantCS.info = //seems useless
+    #gaVariantCS.info = //Not currently utilized
     cs_FileName = "Call_Sets"
     if p.protobuf is None:
         cs_txt_FileName = cs_FileName + '.txt'
@@ -167,7 +167,7 @@ def callMes(call_record, sample_name, variant_id):
     for key, value in call_record.iteritems():
         if key == 'GL' and value is not None:
             gtlikelihood = value
-            gaVariantC.genotype_likelihood.extend(list(gtlikelihood))
+            gaVariantC.genotype_likelihood.extend(list(gtlikelihood)) #GTLikelihood is not always in a VCF File
     if variant_id is not None:
         gaVariantC.info["variant_id"].append(variant_id)
     c_FileName = gaVariantC.call_set_id
