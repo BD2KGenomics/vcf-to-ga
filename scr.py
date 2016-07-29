@@ -51,7 +51,7 @@ def main():
     if p.protobuf is None:
         vSet_FileName = vsID + '.txt'
     else:
-        vSet_FileName = vsID + '.proto'
+        vSet_FileName = vsID + '.pb'
     
     fout1 = open(os.path.join("output2/variantSet", vSet_FileName), 'w')
     if p.protobuf is None:
@@ -73,7 +73,7 @@ def main():
         if p.protobuf is None:
             v_FileName = variant.id + '.txt'
         else:
-            v_FileName = variant.id + '.proto'
+            v_FileName = variant.id + '.pb'
         #checking if the database option was chosen
         if "db" in globals():
             variantd.insert_one(json_format._MessageToJsonObject(vMes(variant), True))
@@ -143,7 +143,7 @@ def callSet(sampleNames):
     if p.protobuf is None:
         cs_txt_FileName = cs_FileName + '.txt'
     else:
-        cs_txt_FileName = cs_FileName + '.proto'
+        cs_txt_FileName = cs_FileName + '.pb'
     if not os.path.isfile(cs_txt_FileName):
             fout4 = open(os.path.join("output2/variantSet/variants/calls/callsets", cs_txt_FileName), 'w')
     if p.protobuf is None:
@@ -174,7 +174,7 @@ def callMes(call_record, sample_name, variant_id):
     if p.protobuf is None:
         c_txt_FileName = c_FileName + '.txt'
     else:
-        c_txt_FileName = c_FileName + '.proto'
+        c_txt_FileName = c_FileName + '.pb'
     if not os.path.isfile(c_txt_FileName):
             fout3 = open(os.path.join("output2/variantSet/variants/calls", c_txt_FileName), 'w')
     if p.protobuf is None:    
