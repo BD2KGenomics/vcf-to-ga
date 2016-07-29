@@ -1,4 +1,3 @@
-#add variant.id to calls
 #filtering on phred qual scores
 import variants_pb2
 import sys
@@ -19,6 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", help="Input file")
 parser.add_argument("-db", "--database", help="Database output")
 parser.add_argument("-ch", "--chromosome", help="Chromosome choice")
+parser.add_argument("-pb", "--protobuf", help="Protobuf out")
 p = parser.parse_args()
 
 assert p.input
@@ -48,10 +48,18 @@ def main():
     #if the directory does not already exist then create it
     if not os.path.exists("output2/variantSet/variants/calls/callsets"):
         os.makedirs("output2/variantSet/variants/calls/callsets")
-    vSet_FileName = vsID + '.txt'
+    if p.protobuf is None:
+        vSet_FileName = vsID + '.txt'
+    else:
+        vSet_FileName = vsID + '.proto'
+    
     fout1 = open(os.path.join("output2/variantSet", vSet_FileName), 'w')
-    fout1.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
-    fout1.close()
+    if p.protobuf is None:
+        fout1.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
+        fout1.close()
+    else:
+        fout1.write (variantSet(hdr))
+        fout1.close()
 
     count = 0
     #checking if the database option was chosen
@@ -62,15 +70,23 @@ def main():
         count += 1
         if count % 100 == 0:
             pBar.update()
-        v_FileName = variant.id + '.txt'
+        if p.protobuf is None:
+            v_FileName = variant.id + '.txt'
+        else:
+            v_FileName = variant.id + '.proto'
         #checking if the database option was chosen
         if "db" in globals():
             variantd.insert_one(json_format._MessageToJsonObject(vMes(variant), True))
-        if not os.path.isfile(v_FileName):
-            fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
-        fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant), True)))
+        if p.protobuf is None:
+            if not os.path.isfile(v_FileName):
+                fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
+            fout2.write (json.dumps(json_format._MessageToJsonObject(vMes(variant))))
+        else:
+            if not os.path.isfile(v_FileName):
+                fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
+            fout2.write (vMes(variant))
     pBar.finish()
-    fout2.close()       
+    fout2.close()  
 
 def get_db(pdatabase):
     client = MongoClient() 
@@ -110,7 +126,10 @@ def variantSet(hdr):
     gaVariantVS.name = str(hdr.contigs)
     gaVariantVS.dataset_id = str(ranId)
     gaVariantVS.metadata.extend(vHeader(hdr))
-    return gaVariantVS
+    if p.protobuf is not None:
+        return gaVariantVS.SerializeToString()
+    else:
+        return gaVariantVS
 
 def callSet(sampleNames):
     gaVariantCS = variants_pb2.CallSet()
@@ -121,10 +140,16 @@ def callSet(sampleNames):
     gaVariantCS.updated = int(time.time())
     #gaVariantCS.info = //seems useless
     cs_FileName = "Call_Sets"
-    cs_txt_FileName = cs_FileName + '.txt'
+    if p.protobuf is None:
+        cs_txt_FileName = cs_FileName + '.txt'
+    else:
+        cs_txt_FileName = cs_FileName + '.proto'
     if not os.path.isfile(cs_txt_FileName):
             fout4 = open(os.path.join("output2/variantSet/variants/calls/callsets", cs_txt_FileName), 'w')
-            fout4.write (json.dumps(json_format._MessageToJsonObject(gaVariantCS, True)))
+    if p.protobuf is None:
+        fout4.write (json.dumps(json_format._MessageToJsonObject(gaVariantCS, True)))
+    else:
+        fout4.write (gaVariantCS.SerializeToString())
     fout4.close()
     if "db" in globals():
         callset.insert_one(json_format._MessageToJsonObject(gaVariantCS, True))
@@ -146,12 +171,17 @@ def callMes(call_record, sample_name, variant_id):
     if variant_id is not None:
         gaVariantC.info["variant_id"].append(variant_id)
     c_FileName = gaVariantC.call_set_id
-    c_txt_FileName = c_FileName + '.txt'
+    if p.protobuf is None:
+        c_txt_FileName = c_FileName + '.txt'
+    else:
+        c_txt_FileName = c_FileName + '.proto'
     if not os.path.isfile(c_txt_FileName):
             fout3 = open(os.path.join("output2/variantSet/variants/calls", c_txt_FileName), 'w')
-            fout3.write (json.dumps(json_format._MessageToJsonObject(gaVariantC, True)))
+    if p.protobuf is None:    
+        fout3.write (json.dumps(json_format._MessageToJsonObject(gaVariantC, True)))
+    else:
+        fout3.write (gaVariantC.SerializeToString())
     fout3.close()
-
     if "db" in globals():
         calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
     callSet(sampleNames)
@@ -178,6 +208,9 @@ def vMes(variant):
         for sample_name in sampleNames:
             call_record = variant.samples[sample_name]
             gaVariant.calls.extend([callMes(call_record,sample_name,variant.id)])
-    return gaVariant
+    if p.protobuf is not None:
+        return gaVariant.SerializeToString()
+    else:
+        return gaVariant
 
 main()
