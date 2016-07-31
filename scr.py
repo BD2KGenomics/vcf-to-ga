@@ -13,6 +13,7 @@ import uuid
 import google.protobuf.struct_pb2 as struct_pb2
 import argparse
 
+
 parser = argparse.ArgumentParser()
 #parser.add_argument("-d","--directory", help="Directory to use")
 parser.add_argument("-i", "--input", help="Input file")
@@ -78,6 +79,11 @@ def get_db(pdatabase):
     db = client[pdatabase]
     return db
 
+"""def test_connection(client):
+    if client.alive() //alive func no longer exists == False:
+        return "no mongodb connection"
+    else:
+        return"""
 #this function taken from ga4gh/datamodel/variants.py.
 def _encodeValue(value):
     if isinstance(value, (list, tuple)):
@@ -145,8 +151,11 @@ def callMes(call_record, sample_name, variant_id):
     call_set_id = uuid.uuid4()
     gaVariantC.call_set_name = sample_name
     gaVariantC.call_set_id = str(call_set_id)
-    if call_record.allele_indices is not None:
-        gaVariantC.genotype.extend(list(call_record.allele_indices))
+    try:
+        if call_record.allele_indices is not None:
+            gaVariantC.genotype.extend(list(call_record.allele_indices))
+    except:
+        pass
     if call_record.phased:
         phaseset = str(call_record.phased)  
     gaVariantC.phaseset = str(phaseset)
