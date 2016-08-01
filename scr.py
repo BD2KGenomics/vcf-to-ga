@@ -13,7 +13,6 @@ import uuid
 import google.protobuf.struct_pb2 as struct_pb2
 import argparse
 
-
 parser = argparse.ArgumentParser()
 #parser.add_argument("-d","--directory", help="Directory to use")
 parser.add_argument("-i", "--input", help="Input file")
@@ -144,7 +143,7 @@ def callSet(sampleNames):
     fout4.close()
     if "db" in globals():
         callset.insert_one(json_format._MessageToJsonObject(gaVariantCS, True))
-    return gaVariantCS
+    return
 
 def callMes(call_record, sample_name, variant_id):
     gaVariantC = variants_pb2.Call()
@@ -179,10 +178,7 @@ def callMes(call_record, sample_name, variant_id):
     if "db" in globals():
         calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
     callSet(sampleNames)
-    if p.protobuf is not None:
-        return gaVariantC.SerializeToString()
-    else:
-        return gaVariantC
+    return gaVariantC
 
 def vMes(variant):
     ranId = uuid.uuid4()
@@ -208,7 +204,6 @@ def vMes(variant):
     for sample_name in sampleNames:
         call_record = variant.samples[sample_name]
         gaVariant.calls.extend([callMes(call_record,sample_name,variant_id)])
-    
     if p.protobuf is None:
         v_FileName = gaVariant.id + '.txt'
     else:
@@ -223,11 +218,8 @@ def vMes(variant):
     else:
         if not os.path.isfile(v_FileName):
             fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
-        fout2.write (gaVariant)
+        fout2.write (gaVariant.SerializeToString())
     fout2.close() 
-    if p.protobuf is not None:
-        return gaVariant.SerializeToString()
-    else:
-        return gaVariant
+    return
 
 main()
