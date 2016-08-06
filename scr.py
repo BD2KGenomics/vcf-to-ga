@@ -39,6 +39,7 @@ def main():
     if p.database is not None:
         global db
         db = get_db(p.database)
+        global variantset
         variantset = db.VariantSet
         global variantd
         variantd = db.Variants
@@ -46,24 +47,10 @@ def main():
         calls = db.Calls
         global callset
         callset = db.CallSets
-    #if the directory does not already exist then create it
+#if the directory does not already exist then create it
     if not os.path.exists("output2/variantSet/variants/calls/callsets"):
         os.makedirs("output2/variantSet/variants/calls/callsets")
-    if p.protobuf is None:
-        vSet_FileName = vsID + '.txt'
-    else:
-        vSet_FileName = vsID + '.pb'
-    
-    fout1 = open(os.path.join("output2/variantSet", vSet_FileName), 'w')
-    if p.protobuf is None:
-        fout1.write (json.dumps(json_format._MessageToJsonObject(variantSet(hdr), True)))
-        fout1.close()
-    else:
-        fout1.write (variantSet(hdr))
-        fout1.close()
-#checking if the database option was chosen
-    if "db" in globals():
-        variantset.insert_one(json_format._MessageToJsonObject(variantSet(hdr), True))
+    variantSet(hdr)
 #count used to update the progressbar
     count = 0
     pBar.start()
@@ -98,7 +85,7 @@ def vsMetadata(key, type1, number, description):
     gaVariant_metaData.number = str(number)
     gaVariant_metaData.description = description
     return gaVariant_metaData
-
+#Contains VCF Header information and calls the vsMetadata function.
 def vHeader(hdr):
     formats = hdr.formats.items()
     infos = hdr.info.items()
@@ -107,7 +94,8 @@ def vHeader(hdr):
         for key, value in content:
             meta.append(vsMetadata(key,value.type,value.number,value.description))
     return meta     
-
+#Creates GA4GH Variant Set message.
+#Also contains the files metadata by calling vHeader function.
 def variantSet(hdr):
     ranId = uuid.uuid4()
     gaVariantVS = variants_pb2.VariantSet()
@@ -116,12 +104,20 @@ def variantSet(hdr):
     gaVariantVS.name = str(hdr.contigs)
     gaVariantVS.dataset_id = str(ranId)
     gaVariantVS.metadata.extend(vHeader(hdr))
-    if p.protobuf is not None:
-        return gaVariantVS.SerializeToString()
+    if p.protobuf is None:
+        vSet_FileName = vsID + '.txt'
     else:
-        return gaVariantVS
-
-def callSet(sampleNames):
+        vSet_FileName = vsID + '.pb'
+    fout1 = open(os.path.join("output2/variantSet", vSet_FileName), 'w')
+    if p.protobuf is None:
+        fout1.write (json.dumps(json_format._MessageToJsonObject(gaVariantVS, True)))
+    else:
+        fout1.write (gaVariantCS.SerializeToString())
+    fout1.close()
+    if "db" in globals():
+        variantset.insert_one(json_format._MessageToJsonObject(gaVariantVS, True))
+#Creates a GA4GH Call Set Message
+def callSet(sampleNames, callSetId):
     gaVariantCS = variants_pb2.CallSet()
     gaVariantCS.name = str(sampleNames)
     #gaVariantCS.bio_sample_id = //Leave blank
@@ -129,7 +125,7 @@ def callSet(sampleNames):
     gaVariantCS.created = int(time.time())
     gaVariantCS.updated = int(time.time())
     #gaVariantCS.info = //Not currently utilized
-    cs_FileName = "Call_Sets"
+    cs_FileName = callSetId
     if p.protobuf is None:
         cs_txt_FileName = cs_FileName + '.txt'
     else:
@@ -144,7 +140,8 @@ def callSet(sampleNames):
     if "db" in globals():
         callset.insert_one(json_format._MessageToJsonObject(gaVariantCS, True))
     return
-
+#Creates a GA4GH Call message.
+#Calls the CallSet function, sends it sampleNames and the call set ID.
 def callMes(call_record, sample_name, variant_id):
     gaVariantC = variants_pb2.Call()
     call_set_id = uuid.uuid4()
@@ -177,9 +174,11 @@ def callMes(call_record, sample_name, variant_id):
     fout3.close()
     if "db" in globals():
         calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
-    callSet(sampleNames)
+    callSet(sampleNames, gaVariantC.call_set_id)
     return gaVariantC
 
+#Creates a GA4GH variant message.  
+#Calls the Call Message function also.
 def vMes(variant):
     ranId = uuid.uuid4()
     gaVariant = variants_pb2.Variant()
@@ -208,18 +207,16 @@ def vMes(variant):
         v_FileName = gaVariant.id + '.txt'
     else:
         v_FileName = gaVariant.id + '.pb'
-#checking if the database option was chosen
+    if not os.path.isfile(v_FileName):
+        fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
     if "db" in globals():
         variantd.insert_one(json_format._MessageToJsonObject(gaVariant, True))
     if p.protobuf is None:
-        if not os.path.isfile(v_FileName):
-            fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
         fout2.write (json.dumps(json_format._MessageToJsonObject(gaVariant, True)))
+        fout2.close()
     else:
-        if not os.path.isfile(v_FileName):
-            fout2 = open(os.path.join("output2/variantSet/variants", v_FileName), 'w')
         fout2.write (gaVariant.SerializeToString())
-    fout2.close() 
+        fout2.close() 
     return
 
 main()
