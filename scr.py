@@ -112,7 +112,7 @@ def variantSet(hdr):
     if p.protobuf is None:
         fout1.write (json.dumps(json_format._MessageToJsonObject(gaVariantVS, True)))
     else:
-        fout1.write (gaVariantCS.SerializeToString())
+        fout1.write (gaVariantVS.SerializeToString())
     fout1.close()
     if "db" in globals():
         variantset.insert_one(json_format._MessageToJsonObject(gaVariantVS, True))
