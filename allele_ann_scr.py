@@ -8,67 +8,85 @@ from pymongo import MongoClient
 import json
 import google.protobuf.json_format as json_format
 import time
-import progressbar
 import uuid
 import google.protobuf.struct_pb2 as struct_pb2
 import argparse
 
 parser = argparse.ArgumentParser()
-#parser.add_argument("-d","--directory", help="Directory to use")
 parser.add_argument("-i", "--input", help="Input file")
-parser.add_argument("-db", "--database", help="Database output")
-parser.add_argument("-ch", "--chromosome", help="Chromosome choice")
-parser.add_argument("-pb", "--protobuf", help="Protobuf out")
 p = parser.parse_args()
 
 assert p.input
 
-widgets = [progressbar.Timer()]
-pBar = progressbar.ProgressBar(widgets=widgets, max_value=100)
 vcfFile = pysam.VariantFile(p.input)
 hdr = vcfFile.header
-var_ann_set_id = uuid.uuid4()
+var_ann_set_id = str(uuid.uuid4())
 def main():
-
+    for variant_record in vcfFile.fetch():
+        VarAnnMes(variant_record, gaVariant.id)
 
 def AnalysisRes():
-	analysis_id
-	result
-	score
-#def AnalysisMes():
+    aRes = allele_annotations_pb2.AnalysisResult()
+    aRes.analysis_id
+    aRes.result
+    aRes.score
 
-def HGVSann():
-	genomic
-	transcript
-	protein
 def alleleLoc():
-	start
-	end
-	reference_sequence
-	alternate_sequence
-def TranscEff():
-	id
-	feature_id
-	alternate_bases
-	(repeatd OntologyTerm) effects
-	hgvs_annotation
-	cdna_location
-	protein_location
-	(repeated AnalysisResult) analysis_result
+    aLoc = allele_annotations_pb2.AlleleLocation()
+    aLoc.start
+    aLoc.end
+    aLoc.reference_sequence
+    aLoc.alternate_sequence
 
 def VarAnnSet(gaVariantVS_id):
-	vaSet = allele_annotations_pb2.VariantAnnotationSet()
-	vaSet.id = str(var_ann_set_id)
-	vaSet.variant_set_id = gaVariantVS_id
-	vaSet.name =
-	vaSet.analysis =
-def VarAnnMes(variant_record, gaVariant_id):
-	vAnMes = allele_annotations_pb2.VariantAnnotation()
-	ranId = uuid.uuid4()
-	vAnMes.id = str(ranId)
-	vAnMes.variant_id = gaVariant_id
-	vAnMes.variant_annotation_set_id
-	vAnMes.created
-	(repeated Transcript Effect) vAnMes.transcript_effects
-	vAnMes.info
+    vAnSet = allele_annotations_pb2.VariantAnnotationSet()
+    vAnSet.id = var_ann_set_id
+    vAnSet.variant_set_id = gaVariantVS_id
+    vAnSet.name =
+    vAnSet.analysis =
 
+def hgvsAnn():
+    hgvs = allele_annotations_pb2.HGVSAnnotation()
+    hgvs.genomic
+    hgvs.transcript
+    hgvs.protein
+    return hgvs
+
+def TranscEff(ann):
+    tEff = allele_annotations_pb2.TranscriptEffect()
+    tEff.id =
+    tEff.feature_id =
+    tEff.alternate_bases =
+    (repeatd OntologyTerm) tEff.effects =
+    tEff.hgvs_annotation.extend(hgvsAnn()) =
+    tEff.cdna_location =
+    tEff.protein_location =
+    tEff.analysis_result.extend(AnalysisRes()) =
+    return tEff
+
+def VarAnnMes(variant_record, gaVariant_id):
+    vAnMes = allele_annotations_pb2.VariantAnnotation()
+    ranId = uuid.uuid4()
+    vAnMes.id = str(ranId)
+    vAnMes.variant_id = gaVariant_id
+    vAnMes.variant_annotation_set_id = var_ann_set_id
+    vAnMes.created = int(time.time())
+    for ann in rec.info["ANN"]:
+        Type = ann.split("|")
+        allele = Type[0]
+        annotation = Type[1]
+        ann_impact = Type[2]
+        Gene_Name = Type[3]
+        Gene_ID = Type[4]
+        Feature_Type = Type[5]
+        Feature_ID = Type[6]
+        Transcript_BioType = Type[7]
+        Rank = Type[8]
+        HGVSc = Type[9]
+        HGVSp = Type[10]
+        cDNA = Type[11]
+        CDS = Type[12]
+        AA = Type[13]
+        Distance = Type[14]
+        EWI = Type[15]
+    vAnMes.info
