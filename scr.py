@@ -1,4 +1,3 @@
-#filtering on phred qual scores
 import variants_pb2
 import sys
 import os
@@ -99,7 +98,7 @@ def vHeader(hdr):
 def variantSet(hdr):
     ranId = uuid.uuid4()
     gaVariantVS = variants_pb2.VariantSet()
-    #gaVariantVS.reference_set_id = //in VCF files tested, this was just always 0.
+    gaVariantVS.reference_set_id = hdr.rid
     gaVariantVS.id = str(vsID)
     gaVariantVS.name = str(hdr.contigs)
     gaVariantVS.dataset_id = str(ranId)
