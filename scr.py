@@ -98,7 +98,7 @@ def vHeader(hdr):
 def variantSet(hdr):
     ranId = uuid.uuid4()
     gaVariantVS = variants_pb2.VariantSet()
-    gaVariantVS.reference_set_id = hdr.rid
+    #gaVariantVS.reference_set_id = pysam has .rid but all files show as 0 for value
     gaVariantVS.id = str(vsID)
     gaVariantVS.name = str(hdr.contigs)
     gaVariantVS.dataset_id = str(ranId)
