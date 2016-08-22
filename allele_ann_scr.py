@@ -71,7 +71,7 @@ def VarAnnMes(variant_record, gaVariant_id):
     vAnMes.variant_id = gaVariant_id
     vAnMes.variant_annotation_set_id = var_ann_set_id
     vAnMes.created = int(time.time())
-    for ann in rec.info["ANN"]:
+    for ann in rec.info["ANN"]: #going to turn into function and send Type[x] 
         Type = ann.split("|")
         allele = Type[0]
         annotation = Type[1]
