@@ -87,7 +87,7 @@ def callSet(sampleNames, callSetId, outputDirectory, p):
         callset.insert_one(json_format._MessageToJsonObject(gaVariantCS, True))
 
 
-def callMes(call_record, sample_name, variant_id, outputDirectory, p):
+def callMes(call_record, sample_name, variant_id, outputDirectory, params):
     """
     Creates a GA4GH Call message.
 
@@ -112,24 +112,24 @@ def callMes(call_record, sample_name, variant_id, outputDirectory, p):
     # I commented this line b/c I couldn't get something working.
     #gaVariantC.info["variant_id"].append(str(variant_id))
     c_FileName = gaVariantC.call_set_id
-    if p.protobuf is None:
+    if params.protobuf is None:
         c_txt_FileName = c_FileName + '.txt'
     else:
         c_txt_FileName = c_FileName + '.pb'
     if not os.path.isfile(c_txt_FileName):
             fout3 = open(os.path.join(outputDirectory, "variantSet/variants/calls", c_txt_FileName), 'w')
-    if p.protobuf is None:    
+    if params.protobuf is None:    
         fout3.write (json.dumps(json_format._MessageToJsonObject(gaVariantC, True)))
     else:
         fout3.write (gaVariantC.SerializeToString())
     fout3.close()
-    if p.database:
+    if params.database:
         calls.insert_one(json_format._MessageToJsonObject(gaVariantC, True))
-    callSet(sampleNames, gaVariantC.call_set_id, outputDirectory, p)
+    callSet(sampleNames, gaVariantC.call_set_id, outputDirectory, params)
     return gaVariantC
 
 
-def vMes(variant, outputDirectory, p):
+def vMes(variant, outputDirectory, params):
     """
     Creates a GA4GH variant message.
 
@@ -164,15 +164,15 @@ def vMes(variant, outputDirectory, p):
     for sample_name in sampleNames:
         call_record = variant.samples[sample_name]
         gaVariant.calls.extend([callMes(call_record,sample_name,variant_id,outputDirectory, p)])
-    if p.protobuf is None:
+    if params.protobuf is None:
         v_FileName = gaVariant.id + '.txt'
     else:
         v_FileName = gaVariant.id + '.pb'
     if not os.path.isfile(v_FileName):
         fout2 = open(os.path.join(outputDirectory, "variantSet/variants", v_FileName), 'w')
-    if p.database:
+    if params.database:
         variantd.insert_one(json_format._MessageToJsonObject(gaVariant, True))
-    if p.protobuf is None:
+    if params.protobuf is None:
         fout2.write(json.dumps(json_format._MessageToJsonObject(gaVariant, True)))
         fout2.close()
     else:
